@@ -6,8 +6,8 @@ from enums import Play_modes, Win_types
 
 BOARD_SIZE:tuple[int, int]  = (8, 6)
 CONNECT_NUM:int             = 4
-PLAYER_SYMBOLS:list[str]    = ['O', 'X', 'Z', 'G']
-PLAYER_NAMES:list[str]      = []
+PLAYER_SYMBOLS:list[str]    = ['O', 'X', 'P', 'C']
+PLAYER_NAMES:list[str]      = ['Bence']
 PLAY_MODE:Play_modes        = Play_modes.P_PC
 
 
@@ -24,6 +24,8 @@ PLAYER_NUM = len(PLAYER_SYMBOLS)
 turn_num = 0
 # False = Computer, True = Player
 player_types:list[bool] = []
+# computer vars
+last_player_moves:list[tuple[int, int]] = []
 
 
 
@@ -102,15 +104,33 @@ def correct_player_names():
 
 
 def get_computer_move(text, board:list[list[str]]):
-    move = -1
-    check_result = (False, -1)
-    while not check_result[0]:
-        # computer making move logic
-        move = int(r.randint(0, BOARD_SIZE[0] - 1))
-        
-        check_result = check_valid_move(move, board, False)
-    print(f"{text}{move + 1}")
-    return move
+    tried_moves:list[tuple[int, int]] = []
+    # computer making move logic
+    posible_moves:list[tuple[int, int]] = []
+    for p_move in last_player_moves:
+        if len(board) > p_move[0] and len(board[0]) > p_move[1] - 1 and board[p_move[0]][p_move[1] - 1] == EMPTY_SYMBOL:
+            m_move = (p_move[1], p_move[0] - 1)
+            if check_valid_move(m_move[0], board, False) and m_move not in tried_moves:
+                posible_moves.append(m_move)
+                tried_moves.append(m_move)
+        if len(board) > p_move[0] + 1 and len(board[0]) > p_move[1] and board[p_move[0] + 1][p_move[1]] == EMPTY_SYMBOL:
+            m_move = (p_move[1] + 1, p_move[0])
+            if check_valid_move(m_move[0], board, False) and m_move not in tried_moves:
+                posible_moves.append(m_move)
+                tried_moves.append(m_move)
+        if len(board) > p_move[0] - 1 and len(board[0]) > p_move[1] and board[p_move[0] - 1][p_move[1]] == EMPTY_SYMBOL:
+            m_move = (p_move[1] - 1, p_move[0])
+            if check_valid_move(m_move[0], board, False) and m_move not in tried_moves:
+                posible_moves.append(m_move)
+                tried_moves.append(m_move)
+    safety_move = (-1, -1)
+    while not check_valid_move(safety_move[0], board, False):
+        safety_move = (int(r.randint(0, BOARD_SIZE[0] - 1)), 0)
+    posible_moves.append(safety_move)
+    
+    move = posible_moves[int(r.randint(0, len(posible_moves) - 1))]
+    print(f"{text}{move[0] + 1}")
+    return move[0]
 
 
 def get_player_move(text:str):
@@ -147,8 +167,12 @@ def check_valid_move(move:int, board:list[list[str]], write_out=True) -> tuple[b
 def make_move(move:int, board:list[list[str]]):
     check_result = check_valid_move(move, board)
     if check_result[0]:
-        board[check_result[1]][move] = get_player_symbol()
-        return (check_result[1], move)
+        newest_move = (check_result[1], move)
+        last_player_moves.append(newest_move)
+        if len(last_player_moves) >= PLAYER_NUM:
+            last_player_moves.pop(0)
+        board[newest_move[0]][newest_move[1]] = get_player_symbol()
+        return newest_move
     else:
         return None
 
